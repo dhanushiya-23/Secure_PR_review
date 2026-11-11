@@ -1,107 +1,85 @@
 # GitHub Copilot Instructions for Secure_PR_review
 
 ## Project overview
-This repository is a Spring Boot banking microservice example implemented in Java 17 with Maven. The application models basic banking flows such as creating accounts, depositing funds, withdrawing funds, checking balances, and transfer-related operations.
+This repository is a Java 17 and Spring Boot 2.7.0 banking backend example built with Maven. It provides account and transaction APIs, including account creation, balance checks, deposits, withdrawals, and transfers.
 
-The codebase is organized around a simple layered architecture:
+The code follows a layered structure under `src/main/java/com/example/paul`:
 - `controllers/` for REST endpoints
 - `services/` for business logic
-- `repositories/` for persistence access
+- `repositories/` for Spring Data persistence
 - `models/` for domain entities
-- `utils/` for request/input validation and helper logic
-- `resources/` for configuration and SQL initialization
+- `utils/` for input types, validation, and helpers
+- `src/main/resources/` for application configuration and SQL initialization
 
-This project is intended for Java + Spring Boot development and should follow idiomatic, production-quality patterns expected by GitHub Copilot assistance in this repository.
+## Technology and compatibility
+- Use Java 17.
+- Keep changes compatible with Spring Boot 2.7.0 and dependencies declared in `pom.xml`.
+- Use Maven Wrapper (`./mvnw`) for local builds and tests. Do not assume Maven is globally installed.
+- Keep code in the existing `com.example.paul` package hierarchy.
+- Avoid new frameworks and dependencies unless required by the requested change.
 
-## Core technology constraints
-- Use Java 17 syntax and conventions.
-- Build and test with Maven, specifically `./mvnw`.
-- Keep compatibility with Spring Boot 2.7.x and the project’s existing dependencies.
-- Prefer the existing package structure: `com.example.paul`.
-- Do not introduce new frameworks or major dependency changes unless clearly required.
+## Architecture and coding conventions
+- Keep controllers focused on HTTP request/response concerns; implement business rules in services.
+- Use repository interfaces for database access. Avoid embedding persistence logic in controllers.
+- Follow existing class naming: `*RestController`, `*Service`, `*Repository`, and `*Input`.
+- Use constructor injection for new Spring components and dependencies; prefer it over field injection.
+- Match nearby code style and favor straightforward, readable Java over unnecessary abstractions.
+- Keep changes scoped to the requested feature; do not perform unrelated refactors.
 
-## Architecture and coding expectations
-- Keep REST controller classes thin and focused on HTTP concerns.
-- Move business logic into `services` classes.
-- Use repository interfaces for persistence access through Spring Data JPA.
-- Keep domain entities in `models` and make them consistent with JPA usage.
-- Reuse the existing patterns for validation, input parsing, and numeric checks rather than introducing ad hoc logic.
-- Prefer explicit, readable code over clever abstractions.
-
-## Repository conventions
-- Follow the current naming patterns:
-  - `*RestController` for controllers
-  - `*Service` for service classes
-  - `*Repository` for repositories
-  - `*Input` for request or validation helper classes
-- Match existing class and method naming conventions.
-- Keep file names aligned with domain responsibilities.
-- Use package-private or public classes appropriately for Spring Boot scanning and testing.
-
-## API and business logic guidance
-- When adding or modifying bank operations, maintain a consistent flow:
-  1. validate request data
-  2. fetch/update account and transaction data via repositories
-  3. apply business rules in service layer
-  4. return a clear response model or HTTP response
-- Validate inputs before processing financial operations.
-- Treat account balance, deposit amount, and withdrawal amount as sensitive business values.
-- Preserve existing semantics for transactions and account actions, especially around error scenarios and invalid values.
-- Keep response payloads understandable and consistent with current controller outputs.
+## API and banking behavior
+- Existing endpoints use the `/api/v1` prefix and JSON request/response bodies. Preserve existing routes and behavior unless the task specifically requests an API change.
+- For a new or modified operation, validate request data, apply business rules in the service layer, access persistence through repositories, and return a clear HTTP response.
+- Validate account identifiers and financial inputs on the server. Reject missing or malformed identifiers and non-positive or otherwise invalid amounts as appropriate to the operation.
+- Treat account balances, account identifiers, owner details, and transaction metadata as sensitive. Do not log sensitive request or account data.
+- Do not silently change existing transaction or balance semantics. For operations that update multiple related records, consider transaction boundaries and consistency.
+- Avoid exposing JPA entities or internal error details in new public API responses when a suitable response DTO is needed.
 
 ## Validation and error handling
-- Prefer clear validation logic over silent failures.
-- Reject invalid input early, especially negative amounts, missing account identifiers, and invalid account data.
-- Preserve meaningful exceptions and HTTP error behavior already used in the project.
-- Avoid broad catch blocks unless the project pattern already requires them.
+- Reuse the existing validation patterns in `utils/` where appropriate, and use Bean Validation annotations with `@Valid` for request types when suitable. This project uses `javax.validation` with Spring Boot 2.7.
+- Fail clearly on invalid input and preserve established error behavior for existing endpoints.
+- Use appropriate HTTP status codes for new endpoints. Do not assume every outcome should return `200 OK`.
+- Avoid broad catch blocks and do not return stack traces or sensitive implementation details.
 
-## Testing expectations
-- Add or update unit tests in `src/test/java/com/example/paul/unit` for service/controller logic.
-- Add or update integration tests in `src/test/java/com/example/paul/integration` for end-to-end banking flows.
-- Keep tests focused, deterministic, and aligned with the project’s existing style.
-- Prefer the existing Spring Boot test setup and JUnit patterns already used in this repo.
+## Tests
+- Add or update unit/controller tests under `src/test/java/com/example/paul/unit/`.
+- Add or update integration tests under `src/test/java/com/example/paul/integration/` when verifying full API/persistence behavior.
+- Follow the existing JUnit and Spring test patterns, including `MockMvc` for controller behavior.
+- Cover success, validation failure, and relevant not-found/business-rule cases.
 
-## Commands
-Use these commands for local validation:
+## Build and verification
+The GitHub Actions workflow at `.github/workflows/maven.yml` sets up Java 17 and runs:
 
 ```bash
+mvn -B package --file pom.xml
+```
+
+For local work, use the Maven Wrapper equivalents:
+
+```bash
+./mvnw -B package --file pom.xml
+```
+
+For a focused test run or a clean test/build, use:
+
+```bash
+./mvnw test
 ./mvnw clean test
 ```
 
-For a full build without running tests:
+Do not claim that a build or tests passed unless the command was actually run and its result is known. If execution is unavailable, state that validation could not be performed.
 
-```bash
-./mvnw clean install -DskipTests=true
-```
-
-For Docker-based local run:
+## Docker and local runtime
+The README documents building and running the container with:
 
 ```bash
 docker build -t "spring-boot:banking" .
 docker run -p 8080:8080 spring-boot:banking
 ```
 
-## Preferred code generation style for Copilot
-- Generate Java code that is idiomatic, explicit, and maintainable.
-- Favor Spring Boot conventions over custom framework patterns.
-- Keep code readable for someone maintaining a banking microservice in a learning/demo project.
-- Make changes minimal and consistent with existing project structure.
-- Do not add unnecessary abstractions, generated boilerplate, or unrelated refactors.
-- If in doubt, match the style and structure of nearby classes in the same package.
+The current local application configuration uses an in-memory H2 database and port 8080. Treat the H2 console and demo configuration as development-oriented; do not expose them as production-safe settings without explicit security and deployment configuration.
 
-## Scope of assistance
-Copilot should assist with:
-- adding banking features
-- improving validation and model logic
-- updating controller/service/repository implementations
-- adding test coverage
-- fixing issues in Java/Spring Boot code
-
-Copilot should avoid:
-- broad rewrites with no clear benefit
-- framework migrations unrelated to the repo
-- introducing non-Spring patterns for a Spring Boot project
-- over-engineering for a simple demo banking application
-
-## Final guidance
-When generating code for this repository, prioritize correctness, maintainability, and consistency with the existing Spring Boot banking application design. Keep the implementation aligned with the repo’s structure, Java 17 conventions, and the current testing/build workflow.
+## GitHub Copilot guidance
+- Generate code specifically for GitHub Copilot assistance in this Java/Spring Boot repository.
+- Follow this instruction file and the nearest existing implementation; inspect related controller, service, repository, input, and test classes before making changes.
+- Prefer minimal, maintainable changes that fit this project over broad rewrites or unrelated framework migrations.
+- Include or update tests for behavior changes and report the exact validation command and outcome.
